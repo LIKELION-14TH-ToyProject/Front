@@ -18,7 +18,7 @@ function SignupPage() {
     <main>
       <h1>Diing</h1>
 
-      <h3>로그인</h3>
+      <h3>회원가입</h3>
 
       <form onSubmit={handleSignup}>
         <Input
