@@ -1,21 +1,8 @@
-import TextArea from "./components/TextArea";
-import Button from "./components/Button";
-import InputText from "./components/InputText";
-import InputNumber from "./components/InputNumber";
-import Card from "./components/Card";
-
+import { RouterProvider } from "react-router-dom";
+import Router from "./Router";
+ 
 function App() {
-
-  return (
-    <>
-    <TextArea/>
-    <Button/>
-    <InputNumber/>
-    <InputText/>
-    <Card/>
-     
-    </>
-  )
+  return <RouterProvider router={Router} />;
 }
-
-export default App
+ 
+export default App;
