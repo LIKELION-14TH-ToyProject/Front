@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ROUTES from "../Routes";
 
-// 로그인 / 회원가입 관련 로직을 담당하는 커스텀 훅 >.<
+// 로그인 / 회원가입 / 로그아웃 관련 로직을 담당하는 커스텀 훅 >.<
 // 지금은 localStorage를 간단한 임시 저장소로 사용 !! 해서 제대로 했는지 확인중...
-// 실제 API 연동 시 fetch/axios 부분만 교체하면 될 듯!!! ㅠ.ㅠ
+// 실제 API 연동 시 fetch/axios 교체하면 될 듯!!! ㅠ.ㅠ
 
 // ─── 로그인 훅
 export function useLogin() {
@@ -34,7 +34,6 @@ export function useLogin() {
     setIsLoading(true);
 
     try {
-
       // 임시: localStorage에 아이디 저장 (로그인 상태 흉내), 나중에 api 수정
       localStorage.setItem("userId", id);
 
@@ -58,7 +57,7 @@ export function useLogin() {
   };
 }
 
-// ─── 회원가입 훅 
+// ─── 회원가입 훅
 export function useSignup() {
   const navigate = useNavigate();
 
@@ -79,12 +78,11 @@ export function useSignup() {
     setIsLoading(true);
 
     try {
-
       // 임시: localStorage에 아이디 저장, 나중에 api 수정
       localStorage.setItem("userId", id);
 
-      // 회원가입 성공 → 일기 목록으로 이동
-      navigate(ROUTES.DIARY_LIST);
+      // 회원가입 성공 → 온보딩 페이지로 이동(변경된 부분)
+      navigate(ROUTES.ONBOARDING_NICKNAME);
     } catch (err) {
       setError("회원가입에 실패했습니다. 다시 시도해주세요.");
     } finally {
@@ -107,15 +105,31 @@ export function useSignup() {
   };
 }
 
-// ─── 로그아웃 로직! 컴포넌트에서 직접 호출?!
+// ─── 로그아웃 로직! 컴포넌트에서 직접 호출?! 훅은 아님...
 export function logout(navigate) {
   // localStorage에서 유저 정보 제거
   localStorage.removeItem("userId");
+  // localStorage에서 온보딩 페이지 시 받은 정보 제거
+  localStorage.removeItem("userNickname");
+  localStorage.removeItem("userBirthdate");
+  localStorage.removeItem("userPurpose");
+
   // 로그인 페이지로 이동
   navigate(ROUTES.LOGIN);
 }
 
-// ─── 현재 로그인된 유저 ID 가져오기 
+// ─── 현재 로그인된 유저 ID 가져오기 / 온보딩 시 받은 유저 정보 가져오기
 export function getUserId() {
   return localStorage.getItem("userId") || "";
+}
+export function getUserNickname() {
+  return localStorage.getItem("userNickname") || "";
+}
+
+export function getUserBirthdate() {
+  return localStorage.getItem("userBirthdate") || "";
+}
+
+export function getUserPurpose() {
+  return localStorage.getItem("userPurpose") || "";
 }
