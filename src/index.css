@@ -1,0 +1,87 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  /* 폰트 */
+  --font-pretendard:
+    "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-poppins: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* 색상 토큰 */
+  /* Grayscale */
+  --color-white-100: #ffffff;
+  --color-gray-100: #1a1c1e;
+  --color-gray-90: #313335;
+  --color-gray-80: #48494b;
+  --color-gray-70: #5f6062;
+  --color-gray-60: #767778;
+  --color-gray-50: #8c8d8e;
+  --color-gray-40: #a3a4a5;
+  --color-gray-30: #babbbb;
+  --color-gray-20: #d1d2d2;
+  --color-gray-10: #e8e8e8;
+  --color-gray-5: #f4f4f4;
+  --color-gray-1: #fafafa;
+
+  /* Primary */
+  --color-main-100: #44b1ff;
+  --color-main-90: #57b9ff;
+  --color-main-80: #69c1ff;
+  --color-main-70: #7cc8ff;
+  --color-main-60: #8fd0ff;
+  --color-main-40: #b4e0ff;
+  --color-main-20: #daefff;
+  --color-main-10: #ecf7ff;
+  --color-main-5: #f6fbff;
+
+  /* Radius */
+  --radius-r8: 0.5rem;
+  --radius-r4: 0.25rem;
+
+  /* Spacing */
+  --spacing-s32: 2rem;
+  --spacing-s24: 1.5rem;
+  --spacing-s16: 1rem;
+  --spacing-s10: 0.625rem;
+  --spacing-s8: 0.5rem;
+  --spacing-s6: 0.375rem;
+  --spacing-s4: 0.25rem;
+
+  /* Effect */
+  --shadow-card: 0 0 0.125rem 0 rgba(72, 73, 75, 0.1);
+  --shadow-button: 0 0 1.25rem 0 rgba(72, 73, 75, 0.1);
+}
+
+/* 전역 스타일 지정 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+@layer base {
+  body {
+    font-family:
+      "Pretendard",
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
+    line-height: 1.5;
+    background-color: #ffffff;
+    color: #1a1c1e;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+  }
+}
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
