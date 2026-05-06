@@ -121,7 +121,7 @@ function MyInfoEditPage() {
         className={[
           "fixed right-0 bottom-0 left-0",
           "mx-auto max-w-[430px]",
-          "rounded-r8 bg-white",
+          "rounded-t-[0.5rem] bg-white",
           "px-[1.5rem] pt-[1.375rem] pb-[0.5rem]",
           "z-[101]",
           "transition-transform duration-300 ease-in-out",
@@ -136,7 +136,7 @@ function MyInfoEditPage() {
         <div className="border-gray-80 focus-within:border-gray-90 relative mb-[1.3125rem] items-center border-b transition-colors">
           <input
             type="text"
-            value={tempValue}
+            value={tempValue || ""}
             onChange={(e) => setTempValue(e.target.value)}
             onKeyDown={(e) => editingField && handleKeyDown(e, editingField)}
             maxLength={isNickname ? 10 : undefined}

@@ -56,7 +56,7 @@ const Input = ({
           className="ml-2 shrink-0 cursor-pointer border-none bg-transparent text-[0.875rem] text-[#A3A4A5]"
         >
           <img
-            src={isPasswordVisible ? EyeClosedIcon : EyeOpenedIcon}
+            src={isPasswordVisible ? EyeOpenedIcon : EyeClosedIcon}
             alt="eye icon"
             className="h-6 w-6 object-contain"
           />

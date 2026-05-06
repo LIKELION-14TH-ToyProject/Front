@@ -5,8 +5,23 @@ import ROUTES from "../../Routes";
 // 우측엔 이미지 썸네일 보여주기
 // 태그 늘어나면 박스 늘어나게 하기 -> 물어보고 확인 완
 
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const parts = dateStr
+    .split(".")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const [year, month, day] = parts.map(Number);
+  if (!year || !month || !day) return dateStr;
+
+  const date = new Date(year, month - 1, day);
+  const monthName = date.toLocaleString("en-US", { month: "short" });
+  return `${monthName}. ${day}, ${year}`; // "May. 6, 2026"
+}
+
 function DiaryCard({ diary }) {
   const navigate = useNavigate();
+  const displayDate = formatDate(diary.date);
 
   return (
     <article
@@ -59,7 +74,7 @@ function DiaryCard({ diary }) {
             dateTime={diary.date}
             className="text-[0.8125rem] font-normal tracking-[-0.02438rem] text-[#AEAEAE]"
           >
-            {diary.date}
+            {displayDate}
           </time>
         </div>
       </div>
