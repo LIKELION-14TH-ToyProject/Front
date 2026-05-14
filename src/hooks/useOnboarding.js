@@ -4,11 +4,15 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ROUTES from "../Routes";
 
+import useAuthStore from "../store/useAuthStore";
+
 // ─── 0-1. 닉네임 입력 훅
 export function useOnboardingNickname() {
   const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
+
+  const storeSetNickname = useAuthStore((state) => state.setNickname);
 
   const handleNext = (e) => {
     e.preventDefault(); //폼 기본 제출 방지! 빼묵어서 오류...날 뻔 ㅠ
@@ -24,10 +28,7 @@ export function useOnboardingNickname() {
       return;
     }
 
-    // 일단은 임시로 localStorage로 기능 확인.. 나중에 api 연동 시 변경할 것!
-    localStorage.setItem("userNickname", nickname);
-
-    // 다음 단계(생년월일 온보딩 페이지)로 이동
+    storeSetNickname(nickname);
     navigate(ROUTES.ONBOARDING_BIRTHDATE);
   };
 
@@ -47,6 +48,8 @@ export function useOnboardingBirthdate() {
   const [mm, setMm] = useState("");
   const [dd, setDd] = useState("");
   const [error, setError] = useState("");
+
+  const storeSetBirthdate = useAuthStore((state) => state.setBirthdate);
 
   // 각 input에 ref 연결 - focus 자동 이동 원하셔서!
   const yyyyRef = useRef(null);
@@ -86,7 +89,7 @@ export function useOnboardingBirthdate() {
     // YYYY-MM-DD 형식으로 합쳐서 저장 나중에 api 교체
     // padStart(2, "0"): 한 자리 숫자면 앞에 0 붙여줌 (예: "1" → "01")
     const birthdate = `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-    localStorage.setItem("userBirthdate", birthdate);
+    storeSetBirthdate(birthdate);
     navigate(ROUTES.ONBOARDING_PURPOSE);
   };
 
@@ -115,6 +118,8 @@ export function useOnboardingPurpose() {
   const [purpose, setPurpose] = useState("");
   const [error, setError] = useState("");
 
+  const storeSetPurpose = useAuthStore((state) => state.setPurpose);
+
   const handleComplete = (e) => {
     e.preventDefault();
     setError("");
@@ -124,10 +129,7 @@ export function useOnboardingPurpose() {
       return;
     }
 
-    // 나중에 api 연동하고 교체
-    localStorage.setItem("userPurpose", purpose);
-
-    // 온보딩 완료 -> 일기 목록으로 이동
+    storeSetPurpose(purpose);
     navigate(ROUTES.DIARY_LIST);
   };
 
