@@ -6,6 +6,8 @@ import ROUTES from "../Routes";
 
 import useAuthStore from "../store/useAuthStore";
 
+import api from "../api";
+
 // ─── 0-1. 닉네임 입력 훅
 export function useOnboardingNickname() {
   const navigate = useNavigate();
@@ -118,9 +120,11 @@ export function useOnboardingPurpose() {
   const [purpose, setPurpose] = useState("");
   const [error, setError] = useState("");
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const storeSetPurpose = useAuthStore((state) => state.setPurpose);
 
-  const handleComplete = (e) => {
+  const handleComplete = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -130,11 +134,38 @@ export function useOnboardingPurpose() {
     }
 
     storeSetPurpose(purpose);
-    navigate(ROUTES.DIARY_LIST);
+    setIsLoading(true);
+
+    try {
+      // store에서 앞 단계에서 임시 저장한 값 전부 꺼내서
+      const { tempId, tempPassword, userNickname, userBirthdate } =
+        useAuthStore.getState();
+
+      // post- /accounts/signup/
+      await api.post("/accounts/signup/", {
+        username: tempId,
+        password: tempPassword,
+        nickname: userNickname,
+        birth: userBirthdate, // YYYY-MM-DD 형식
+        purpose: purpose,
+      });
+
+      // 회원가입 성공 시 임시 저장값 정리 후 로그인 페이지로 이동
+      // 응답에 토큰 없으니까 자동 로그인 없이 직접 로그인해야
+      useAuthStore.getState().clearTemp();
+      navigate(ROUTES.LOGIN);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "회원가입에 실패했습니다. 다시 시도해주세요.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 뒤로가기 -> 생년월일 단계로
   const handleBack = () => navigate(ROUTES.ONBOARDING_BIRTHDATE);
 
-  return { purpose, setPurpose, error, handleComplete, handleBack };
+  return { purpose, setPurpose, error, isLoading, handleComplete, handleBack };
 }

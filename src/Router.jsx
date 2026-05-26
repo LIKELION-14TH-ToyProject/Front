@@ -38,27 +38,15 @@ const Router = createBrowserRouter([
   // GNB 없는 페이지 - 회원가입 후 연결되는 온보딩 페이지
   {
     path: ROUTES.ONBOARDING_NICKNAME,
-    element: (
-      <PrivateRoute>
-        <OnboardingNicknamePage />
-      </PrivateRoute>
-    ),
+    element: <OnboardingNicknamePage />,
   },
   {
     path: ROUTES.ONBOARDING_BIRTHDATE,
-    element: (
-      <PrivateRoute>
-        <OnboardingBirthdatePage />
-      </PrivateRoute>
-    ),
+    element: <OnboardingBirthdatePage />,
   },
   {
     path: ROUTES.ONBOARDING_PURPOSE,
-    element: (
-      <PrivateRoute>
-        <OnboardingPurposePage />
-      </PrivateRoute>
-    ),
+    element: <OnboardingPurposePage />,
   },
 
   // GNB 없는 페이지

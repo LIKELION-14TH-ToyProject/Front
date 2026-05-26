@@ -1,4 +1,11 @@
 import { useNavigate } from "react-router-dom";
+
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${import.meta.env.VITE_API_BASE_URL}${url}`;
+};
+
 import { useDiaryDetail, useDiaryDelete } from "../hooks/useDiary";
 import useModalStore from "../store/useModalStore";
 import useToastStore from "../store/useToastStore";
@@ -6,18 +13,13 @@ import ROUTES from "../Routes";
 import Back from "../assets/icons/back.svg";
 import Photo from "../assets/icons/photo.svg";
 
+// 날짜 format 변환!
 function formatDate(dateStr) {
   if (!dateStr) return "";
-  // "2026. 5. 6." 을 ["2026", "5", "6", ""] split 해야 됨 ㅠ 이거 때무넹 애먹엇다
-  const parts = dateStr
-    .split(".")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const [year, month, day] = parts.map(Number);
-  if (!year || !month || !day) return dateStr;
-  const date = new Date(year, month - 1, day);
+  const date = new Date(dateStr);
+  if (isNaN(date)) return dateStr;
   const monthName = date.toLocaleString("en-US", { month: "short" });
-  return `${monthName}. ${day}, ${year}`; // "May. 6, 2026"
+  return `${monthName}. ${date.getDate()}, ${date.getFullYear()}`;
 }
 
 function DiaryDetailPage() {
@@ -39,10 +41,10 @@ function DiaryDetailPage() {
       confirmLabel: "삭제",
       confirmVariant: "primary",
       onConfirm: () => {
-        showToast(`[ ${formattedDate} ]\n삭제되었습니다.`);
-        setTimeout(() => {
-          baseConfirmDelete();
-        }, 2000);
+        baseConfirmDelete(() => {
+          showToast(`[ ${formattedDate} ]\n삭제되었습니다.`);
+          setTimeout(() => navigate(ROUTES.DIARY_LIST), 2000);
+        });
       },
     });
   };
@@ -85,7 +87,7 @@ function DiaryDetailPage() {
       <div className="flex flex-1 flex-col overflow-y-auto px-[1.25rem] pt-[1.62rem] pb-[clamp(1rem,5vh,4rem)]">
         {/* 일기 상세 카드 */}
         <div
-          className="rounded-r8 px- flex flex-col bg-white"
+          className="rounded-r8 flex flex-col bg-white"
           style={{ minHeight: "clamp(22rem,70svh,37rem)" }}
         >
           {/* 날짜 */}
@@ -97,9 +99,9 @@ function DiaryDetailPage() {
           </time>
 
           {/* 태그 (위치만 카드 안으로 이동, 스타일 동일) */}
-          {diary.tags && diary.tags.length > 0 && (
+          {diary.tag_list && diary.tag_list.length > 0 && (
             <ul className="m-0 mx-[clamp(0.75rem,4vw,1.2rem)] mt-[0.625rem] flex list-none flex-wrap justify-center gap-[0.375rem] p-0">
-              {diary.tags.map((tag) => (
+              {diary.tag_list.map((tag) => (
                 <li
                   key={tag}
                   className="rounded-r4 bg-main-80 px-[0.625rem] py-[0.125rem] text-[0.8125rem] font-medium tracking-[-0.03em] text-white"
@@ -112,10 +114,10 @@ function DiaryDetailPage() {
 
           {/* 이미지 */}
           <div className="mt-[1rem] w-full shrink-0 px-[clamp(0.5rem,3vw,1rem)]">
-            {diary.imageUrl ? (
+            {diary.photo ? (
               <figure className="m-0">
                 <img
-                  src={diary.imageUrl}
+                  src={getImageUrl(diary.photo)}
                   alt="일기 이미지"
                   className="h-auto max-h-[clamp(12rem,50svh,28rem)] w-full object-contain"
                 />
@@ -133,7 +135,7 @@ function DiaryDetailPage() {
 
           {/* 본문 (위치만 카드 안으로 이동, 스타일 동일) */}
           <p className="text-gray-90 m-0 mx-[clamp(0.75rem,4vw,1.25rem)] mt-[1rem] pb-[1.5rem] text-[1rem] font-medium tracking-[-0.03em] whitespace-pre-wrap">
-            {diary.content}
+            {diary.body}
           </p>
         </div>
 
