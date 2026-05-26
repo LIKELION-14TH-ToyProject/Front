@@ -2,28 +2,32 @@
 // 피그마 파일 중간 끝나고 최종 확인해서 수정
 
 import { useMyPage } from "../hooks/useMyInfo";
-import Modal from "../components/common/Modal";
-import Toast from "../components/common/Toast";
-import useToast from "../hooks/useToast";
+import useModalStore from "../store/useModalStore";
+import useToastStore from "../store/useToastStore";
 import Cake from "../assets/icons/cake.svg";
 import Chat from "../assets/icons/chat.svg";
 
 function MyPage() {
   const {
     userInfo,
-    isLogoutModalOpen,
     handleGoToEdit,
-    handleLogoutClick,
-    handleLogoutCancel,
     handleLogoutConfirm: baseLogoutConfirm,
   } = useMyPage();
 
-  const { toast, showToast } = useToast();
+  const openModal = useModalStore((state) => state.openModal);
+  const showToast = useToastStore((state) => state.showToast);
 
-  const handleLogoutConfirm = () => {
-    handleLogoutCancel();
-    showToast("로그아웃되었습니다.");
-    setTimeout(() => baseLogoutConfirm(), 1500);
+  const handleLogoutClick = () => {
+    openModal({
+      title: "로그아웃하시겠어요?",
+      cancelLabel: "취소",
+      confirmLabel: "로그아웃",
+      confirmVariant: "primary",
+      onConfirm: () => {
+        showToast("로그아웃되었습니다.");
+        setTimeout(() => baseLogoutConfirm(), 1500);
+      },
+    });
   };
 
   const formatBirthdate = (birthdate) => {
@@ -107,20 +111,6 @@ function MyPage() {
           로그아웃
         </button>
       </div>
-
-      {/* 로그아웃 확인 모달 띄우기 */}
-      <Modal
-        isOpen={isLogoutModalOpen}
-        title={"로그아웃하시겠어요?"}
-        cancelLabel="취소"
-        confirmLabel="로그아웃"
-        confirmVariant="primary"
-        onCancel={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-      />
-
-      {/* 로그아웃 완료 토스트 메세지 */}
-      <Toast message={toast.message} isVisible={toast.isVisible} />
     </section>
   );
 }

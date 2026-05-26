@@ -18,24 +18,82 @@ import MyInfoEditPage from "./pages/MyInfoEditPage";
 
 import ROUTES from "./Routes";
 
+import { PrivateRoute, PublicOnlyRoute } from "./ProtectedRoute";
+
 const Router = createBrowserRouter([
   // GNB 없는 페이지 (로그인, 회원가입)
-  { path: ROUTES.LOGIN, element: <LogInPage /> },
-  { path: ROUTES.SIGNUP, element: <SignUpPage /> },
+  {
+    path: ROUTES.LOGIN,
+    element: (
+      <PublicOnlyRoute>
+        <LogInPage />
+      </PublicOnlyRoute>
+    ),
+  },
+  {
+    path: ROUTES.SIGNUP,
+    element: <SignUpPage />,
+  },
 
   // GNB 없는 페이지 - 회원가입 후 연결되는 온보딩 페이지
-  { path: ROUTES.ONBOARDING_NICKNAME, element: <OnboardingNicknamePage /> },
-  { path: ROUTES.ONBOARDING_BIRTHDATE, element: <OnboardingBirthdatePage /> },
-  { path: ROUTES.ONBOARDING_PURPOSE, element: <OnboardingPurposePage /> },
+  {
+    path: ROUTES.ONBOARDING_NICKNAME,
+    element: (
+      <PrivateRoute>
+        <OnboardingNicknamePage />
+      </PrivateRoute>
+    ),
+  },
+  {
+    path: ROUTES.ONBOARDING_BIRTHDATE,
+    element: (
+      <PrivateRoute>
+        <OnboardingBirthdatePage />
+      </PrivateRoute>
+    ),
+  },
+  {
+    path: ROUTES.ONBOARDING_PURPOSE,
+    element: (
+      <PrivateRoute>
+        <OnboardingPurposePage />
+      </PrivateRoute>
+    ),
+  },
 
   // GNB 없는 페이지
-  { path: ROUTES.DIARY_WRITE, element: <DiaryWritePage /> },
-  { path: ROUTES.DIARY_DETAIL, element: <DiaryDetailPage /> },
-  { path: ROUTES.MY_INFO_EDIT, element: <MyInfoEditPage /> },
+  {
+    path: ROUTES.DIARY_WRITE,
+    element: (
+      <PrivateRoute>
+        <DiaryWritePage />
+      </PrivateRoute>
+    ),
+  },
+  {
+    path: ROUTES.DIARY_DETAIL,
+    element: (
+      <PrivateRoute>
+        <DiaryDetailPage />
+      </PrivateRoute>
+    ),
+  },
+  {
+    path: ROUTES.MY_INFO_EDIT,
+    element: (
+      <PrivateRoute>
+        <MyInfoEditPage />
+      </PrivateRoute>
+    ),
+  },
 
   // GNB 있는 페이지
   {
-    element: <Layout />,
+    element: (
+      <PrivateRoute>
+        <Layout />
+      </PrivateRoute>
+    ),
     children: [
       { path: ROUTES.DIARY_LIST, element: <DiaryListPage /> },
       { path: ROUTES.MY_PAGE, element: <MyPage /> },

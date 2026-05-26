@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useDiaryDetail, useDiaryDelete } from "../hooks/useDiary";
-import useToast from "../hooks/useToast";
-import Modal from "../components/common/Modal";
-import Toast from "../components/common/Toast";
+import useModalStore from "../store/useModalStore";
+import useToastStore from "../store/useToastStore";
 import ROUTES from "../Routes";
 import Back from "../assets/icons/back.svg";
 import Photo from "../assets/icons/photo.svg";
@@ -24,24 +23,28 @@ function formatDate(dateStr) {
 function DiaryDetailPage() {
   const navigate = useNavigate();
   const { diary, handleEdit } = useDiaryDetail();
-  const { toast, showToast } = useToast();
+  const openModal = useModalStore((state) => state.openModal);
+  const showToast = useToastStore((state) => state.showToast);
 
   // 삭제 훅 -> diary가 없으면 id를 넘길 수 없으므로 조건부로 처리
-  const {
-    isModalOpen,
-    handleDeleteClick,
-    handleCancel,
-    handleConfirmDelete: baseConfirmDelete,
-  } = useDiaryDelete(diary?.id);
+  const { handleConfirmDelete: baseConfirmDelete } = useDiaryDelete(diary?.id);
 
-  // 토스트랑 모달 안 겹치게 수정! -> 완료
-  const handleConfirmDelete = () => {
-    handleCancel();
+  // 삭제 버튼 클릭하면 openModal로 모달 띄우기
+  const handleDeleteClick = () => {
     const formattedDate = formatDate(diary?.date);
-    showToast(`[ ${formattedDate} ]\n삭제되었습니다.`);
-    setTimeout(() => {
-      baseConfirmDelete();
-    }, 2000);
+    const modalTitle = `[ ${formattedDate} ]\n해당 일기를 삭제하시겠습니까?`;
+
+    openModal({
+      title: modalTitle,
+      confirmLabel: "삭제",
+      confirmVariant: "primary",
+      onConfirm: () => {
+        showToast(`[ ${formattedDate} ]\n삭제되었습니다.`);
+        setTimeout(() => {
+          baseConfirmDelete();
+        }, 2000);
+      },
+    });
   };
 
   // 일기 데이터가 아직 로드되지 않은 경우
@@ -54,8 +57,6 @@ function DiaryDetailPage() {
   }
 
   const displayDate = formatDate(diary.date);
-
-  const modalTitle = `[ ${displayDate} ]\n해당 일기를 삭제하시겠습니까?`;
 
   return (
     <section className="bg-main-5 mx-auto flex min-h-screen max-w-[430px] flex-col">
@@ -154,18 +155,6 @@ function DiaryDetailPage() {
           </button>
         </div>
       </div>
-      {/* 삭제 확인 모달 */}
-      <Modal
-        isOpen={isModalOpen}
-        title={modalTitle}
-        confirmLabel="삭제"
-        confirmVariant="primary"
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCancel}
-      />
-
-      {/* 삭제 완료 토스트 */}
-      <Toast message={toast.message} isVisible={toast.isVisible} />
     </section>
   );
 }

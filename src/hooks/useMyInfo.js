@@ -4,49 +4,35 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  getUserId,
-  getUserNickname,
-  getUserBirthdate,
-  getUserPurpose,
-  logout,
-} from "./useAuth";
 import ROUTES from "../Routes";
+
+import useAuthStore from "../store/useAuthStore";
+import { logout } from "./useAuth";
 
 // ─── 2-1. 마이페이지 훅
 export function useMyPage() {
   const navigate = useNavigate();
 
-  // localStorage에서 유저 정보 읽기
-  // useState 초기값으로 바로 넣어서, 마운트 시 자동으로 불러오도록
-  const [userInfo] = useState({
-    id: getUserId(),
-    nickname: getUserNickname(),
-    birthdate: getUserBirthdate(),
-    purpose: getUserPurpose(),
-  });
+  const userId = useAuthStore((state) => state.userId);
+  const userNickname = useAuthStore((state) => state.userNickname);
+  const userBirthdate = useAuthStore((state) => state.userBirthdate);
+  const userPurpose = useAuthStore((state) => state.userPurpose);
 
-  // 로그아웃 확인 모달 열림/닫힘 상태
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const userInfo = {
+    id: userId,
+    nickname: userNickname,
+    birthdate: userBirthdate,
+    purpose: userPurpose,
+  };
 
   // 내 정보 수정 페이지로 이동
   const handleGoToEdit = () => navigate(ROUTES.MY_INFO_EDIT);
 
-  // 로그아웃 버튼 클릭 -> 확인 모달 열기
-  const handleLogoutClick = () => setIsLogoutModalOpen(true);
-
-  // 모달에서 취소 클릭 -> 모달 닫기
-  const handleLogoutCancel = () => setIsLogoutModalOpen(false);
-
-  // 모달에서 로그아웃 클릭 -> 로그아웃 실행
   const handleLogoutConfirm = () => logout(navigate);
 
   return {
     userInfo,
-    isLogoutModalOpen,
     handleGoToEdit,
-    handleLogoutClick,
-    handleLogoutCancel,
     handleLogoutConfirm,
   };
 }
@@ -55,11 +41,17 @@ export function useMyPage() {
 export function useMyInfoEdit() {
   const navigate = useNavigate();
 
+  const userId = useAuthStore((state) => state.userId);
+  const userNickname = useAuthStore((state) => state.userNickname);
+  const userPurpose = useAuthStore((state) => state.userPurpose);
+
+  const updateUserInfo = useAuthStore((state) => state.updateUserInfo);
+
   // 현재 저장된 값 -> 화면 표시
   const [fields, setFields] = useState({
-    id: getUserId(),
-    nickname: getUserNickname(),
-    purpose: getUserPurpose(),
+    id: userId,
+    nickname: userNickname,
+    purpose: userPurpose,
   });
 
   const [editingField, setEditingField] = useState(null);
@@ -104,10 +96,7 @@ export function useMyInfoEdit() {
     const updated = { ...fields, [fieldName]: tempValue };
     setFields(updated);
 
-    // localStorage 저장
-    // 나중엔 API 연동 시 교체 api호출로
-    localStorage.setItem("userNickname", updated.nickname);
-    localStorage.setItem("userPurpose", updated.purpose);
+    updateUserInfo({ nickname: updated.nickname, purpose: updated.purpose });
 
     setEditingField(null); // 수정 모드 종료
   };
