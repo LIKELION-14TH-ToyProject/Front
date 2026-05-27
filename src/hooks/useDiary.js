@@ -1,46 +1,46 @@
 // 일기 CRUD 관련 로직을 담당하는 커스텀 훅!!!! 을 만들어보자...
-// 일단 임시로 localStorage를 임시 데이터베이스로 사용할까?
-// 실제 API 연동 시 fetch 교체하면 될 듯!!!! ㅜ.ㅜ
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import ROUTES from "../Routes";
 
-// ─── localStorage 관련 함수 로직 >.<
-// 저장된 모든 일기 가져오기
-function getDiariesFromStorage() {
-  const data = localStorage.getItem("diaries");
-  return data ? JSON.parse(data) : [];
-}
-
-// 일기 배열 객체 localStorage에 저장하기
-function saveDiariesToStorage(diaries) {
-  localStorage.setItem("diaries", JSON.stringify(diaries));
-}
+import api from "../api";
 
 // ─── 1-1. 일기 목록 훅
 export function useDiaryList() {
-  const [diaries, setDiaries] = useState([]); // 컴포넌트가 마운트될 때 localStorage에서 일기 목록을 불러옴
+  const [diaries, setDiaries] = useState([]);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // api 연동하면 바꿀 것!!!
-    const stored = getDiariesFromStorage(); // 최신 글이 위로 오도록 내림차순!
-    setDiaries([...stored].reverse());
-  }, []); //빈 배열이니까 처음 1번 실행됨
+    const fetchDiaries = async () => {
+      try {
+        // get- /diary/
+        const response = await api.get("/diary/");
+        setDiaries([...response.data].reverse()); // 서버가 오래된순으로 주니까 최신순으로 뒤집기
+      } catch (err) {
+        setError("일기를 불러오지 못했습니다.");
+        console.error("일기 목록 불러오기 실패:", err);
+      } finally {
+        setIsLoading(false); // 성공/실패 모두 로딩 종료 이거 빼먹어서 ㅠ 고생
+      }
+    };
+    fetchDiaries();
+  }, []);
 
-  return { diaries };
+  return { diaries, error, isLoading };
 }
 
 // ─── 1-1-1. 태그 필터 훅 .....하 죽겠다 ㅠ.ㅠ
 // 전체 태그 보여주고! 다이어리 선택하고! -> 마운팅 관련 에러 나서 list로 넘김
 export function useDiaryFilter(diaries, selectedTags) {
-  const allTags = [...new Set(diaries.flatMap((d) => d.tags || []))];
+  const allTags = [...new Set(diaries.flatMap((d) => d.tag_list || []))];
 
   const filteredDiaries =
     selectedTags.length === 0
       ? diaries
       : diaries.filter((d) =>
-          selectedTags.every((tag) => (d.tags || []).includes(tag)),
+          selectedTags.every((tag) => (d.tag_list || []).includes(tag)),
         );
 
   return { allTags, filteredDiaries };
@@ -79,20 +79,22 @@ export function useDiaryWrite() {
     setIsLoading(true);
 
     try {
-      // 임시: localStorage에 저장, 나중에 api 연동 시 수정
-      const newDiary = {
-        id: Date.now().toString(), // 임시 고유 ID? key?
-        date: new Date().toLocaleDateString("ko-KR"), // 오늘 날짜
-        tags,
-        content,
-        imageUrl: imagePreview, // 임시로 base64 URL 저장
-      };
+      // post- /diary/ 헤더 타입 다름
+      const formData = new FormData();
+      formData.append("title", content.slice(0, 50)); // body 앞 50자 정도? title로 사용
+      formData.append("body", content); // 본문 전체
+      formData.append("language", 1); // 한국어 고정값으로 일단
+      tags.forEach((tag) => formData.append("tag_names", tag)); // 태그 배열
+      if (imageFile) formData.append("photo", imageFile); // 이미지 파일
 
-      const existing = getDiariesFromStorage();
-      saveDiariesToStorage([...existing, newDiary]);
+      await api.post("/diary/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
       navigate(ROUTES.DIARY_LIST);
     } catch (err) {
       console.error("일기 등록 실패:", err);
+      alert(err.response?.data?.message || "일기 등록에 실패했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -115,16 +117,23 @@ export function useDiaryWrite() {
 
 // ─── 1-3. 일기 상세 훅
 export function useDiaryDetail() {
-  const { id } = useParams(); // URL에서 :id 가져오기
+  const { id } = useParams(); // URL에서 :id 가져오기 -pk
   const navigate = useNavigate();
 
   const [diary, setDiary] = useState(null); // 현재 상세 일기 데이터, 마운트 시에 일기 불러옴
 
   useEffect(() => {
-    // api 연동 시 바꾸기~
-    const stored = getDiariesFromStorage();
-    const found = stored.find((d) => String(d.id) === String(id));
-    setDiary(found || null);
+    const fetchDiary = async () => {
+      try {
+        // get- /diary/<int:pk>
+        const response = await api.get(`/diary/${id}/`);
+        setDiary(response.data);
+      } catch (err) {
+        console.error("일기 불러오기 실패:", err);
+        setDiary(null);
+      }
+    };
+    fetchDiary();
   }, [id]);
 
   const handleEdit = () => {
@@ -151,15 +160,15 @@ export function useDiaryDelete(diaryId) {
     setIsModalOpen(false);
   };
 
-  const handleConfirmDelete = () => {
-    // api 연동 시에 바꾸기!!
-    const stored = getDiariesFromStorage();
-    const updated = stored.filter((d) => d.id !== diaryId);
-    saveDiariesToStorage(updated);
-
-    setIsModalOpen(false);
-
-    navigate(ROUTES.DIARY_LIST); // 삭제 후에 목록으로 이동
+  const handleConfirmDelete = async (onSuccess) => {
+    try {
+      // delete- /diary/<int:pk>/
+      await api.delete(`/diary/${diaryId}/`);
+      onSuccess?.();
+    } catch (err) {
+      console.error("일기 삭제 실패:", err);
+      alert(err.response?.data?.message || "일기 삭제에 실패했습니다.");
+    }
   };
 
   return {
@@ -186,9 +195,9 @@ export function useDiaryEdit() {
 
   // 수정 모드 위해 내용 setting
   const initWithExistingData = (diary) => {
-    setImagePreview(diary.imageUrl || "");
-    setTags(diary.tags || []);
-    setContent(diary.content || "");
+    setContent(diary.body || "");
+    setTags(diary.tag_list || []);
+    setImagePreview(diary.photo || "");
   };
 
   const handleImageChange = (e) => {
@@ -218,15 +227,26 @@ export function useDiaryEdit() {
     setIsLoading(true);
 
     try {
-      // api 연동하면 바꿔야 해요~~
-      const stored = getDiariesFromStorage();
-      const updated = stored.map((d) =>
-        d.id === id ? { ...d, tags, content, imageUrl: imagePreview } : d,
-      ); //map으로 update 돌리기
-      saveDiariesToStorage(updated); // 수정 완료 후 상세 페이지로 돌아감
+      // put - /diary/<int:pk>/
+      const formData = new FormData();
+      formData.append("title", content.slice(0, 50));
+      formData.append("body", content);
+      formData.append("language", 1);
+      tags.forEach((tag) => formData.append("tag_names", tag));
+      if (imageFile) {
+        formData.append("photo", imageFile); // 새 이미지로 변경
+      } else if (!imagePreview) {
+        formData.append("photo", ""); // 이미지 삭제 (빈 값으로 서버에 전달)
+      }
+
+      await api.put(`/diary/${id}/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
       navigate(ROUTES.DIARY_DETAIL.replace(":id", id));
     } catch (err) {
       console.error("일기 수정 실패:", err);
+      alert(err.response?.data?.message || "일기 수정에 실패했습니다.");
     } finally {
       setIsLoading(false);
     }

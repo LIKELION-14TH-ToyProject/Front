@@ -4,9 +4,9 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import useAuthStore from "../src/store/useAuthStore";
+import useAuthStore from "./store/useAuthStore";
 
-import ROUTES from "../src/Routes";
+import ROUTES from "./Routes";
 
 // 비로그인 상태로 접근하면 alert 하고 로그인 페이지로 이동
 export function PrivateRoute({ children }) {

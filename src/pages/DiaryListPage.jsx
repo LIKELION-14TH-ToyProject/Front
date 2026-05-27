@@ -8,9 +8,29 @@ import Pencil from "../assets/icons/pencil.svg";
 
 function DiaryListPage() {
   const navigate = useNavigate();
-  const { diaries } = useDiaryList(); // localStorage에서 일기 목록 불러오기
+  const { diaries, error, isLoading } = useDiaryList();
   const [selectedTags, setSelectedTags] = useState([]);
   const { allTags, filteredDiaries } = useDiaryFilter(diaries, selectedTags);
+
+  if (isLoading) {
+    return (
+      <section className="bg-main-5 mt-10 flex flex-1 flex-col items-center justify-center px-[1.5rem]">
+        <p className="text-center text-[0.9rem] font-normal tracking-[-0.03em] text-gray-50">
+          일기를 불러오는 중...
+        </p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="bg-main-5 mt-10 flex flex-1 flex-col items-center justify-center px-[1.5rem]">
+        <p className="text-center text-[0.9rem] font-normal tracking-[-0.03em] text-[#FF4444]">
+          {error}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="bg-main-5 relative flex flex-1 flex-col px-[1.5rem]">

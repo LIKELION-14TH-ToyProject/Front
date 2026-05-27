@@ -9,17 +9,19 @@ import ROUTES from "../Routes";
 import useAuthStore from "../store/useAuthStore";
 import { logout } from "./useAuth";
 
+import api from "../api";
+
 // ─── 2-1. 마이페이지 훅
 export function useMyPage() {
   const navigate = useNavigate();
 
-  const userId = useAuthStore((state) => state.userId);
+  const username = useAuthStore((state) => state.username);
   const userNickname = useAuthStore((state) => state.userNickname);
   const userBirthdate = useAuthStore((state) => state.userBirthdate);
   const userPurpose = useAuthStore((state) => state.userPurpose);
 
   const userInfo = {
-    id: userId,
+    id: username,
     nickname: userNickname,
     birthdate: userBirthdate,
     purpose: userPurpose,
@@ -41,16 +43,17 @@ export function useMyPage() {
 export function useMyInfoEdit() {
   const navigate = useNavigate();
 
-  const userId = useAuthStore((state) => state.userId);
+  const username = useAuthStore((state) => state.username);
   const userNickname = useAuthStore((state) => state.userNickname);
+  const userBirthdate = useAuthStore((state) => state.userBirthdate);
   const userPurpose = useAuthStore((state) => state.userPurpose);
-
   const updateUserInfo = useAuthStore((state) => state.updateUserInfo);
 
   // 현재 저장된 값 -> 화면 표시
   const [fields, setFields] = useState({
-    id: userId,
+    id: username,
     nickname: userNickname,
+    birth: userBirthdate,
     purpose: userPurpose,
   });
 
@@ -70,7 +73,7 @@ export function useMyInfoEdit() {
   };
 
   // 저장하면 검사...하고
-  const handleEditConfirm = (fieldName) => {
+  const handleEditConfirm = async (fieldName) => {
     setError("");
 
     // 필드별 유효성 검사
@@ -94,11 +97,29 @@ export function useMyInfoEdit() {
 
     // 해당 필드만 업데이트
     const updated = { ...fields, [fieldName]: tempValue };
-    setFields(updated);
 
-    updateUserInfo({ nickname: updated.nickname, purpose: updated.purpose });
+    try {
+      // put- /accounts/profile/
+      const response = await api.put("/accounts/profile/", {
+        nickname: updated.nickname,
+        birth: userBirthdate,
+        purpose: updated.purpose,
+      });
+      setFields(updated);
 
-    setEditingField(null); // 수정 모드 종료
+      updateUserInfo({
+        nickname: response.data.nickname,
+        birth: response.data.birth,
+        purpose: response.data.purpose,
+      });
+
+      setEditingField(null);
+    } catch (err) {
+      setError(err.response?.data?.message || "수정에 실패했습니다.");
+      return;
+    }
+
+    setEditingField(null); // 수정모드 종료
   };
 
   // 엔터 누르면 저장하게! esc는 취소...

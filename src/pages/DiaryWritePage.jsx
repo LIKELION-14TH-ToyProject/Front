@@ -1,4 +1,9 @@
 import { useEffect } from "react";
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http") || url.startsWith("data:")) return url; // 절대경로 or base64 그대로
+  return `${import.meta.env.VITE_API_BASE_URL}${url}`;
+};
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDiaryWrite, useDiaryEdit } from "../hooks/useDiary";
 import Back from "../assets/icons/back.svg";
@@ -86,7 +91,7 @@ function DiaryWritePage() {
             {imagePreview ? (
               <div className="relative h-[clamp(6.5rem,15vh,7.5rem)] w-[clamp(7rem,20vw,8rem)]">
                 <img
-                  src={imagePreview}
+                  src={getImageUrl(imagePreview)}
                   alt="선택한 이미지"
                   className="rounded-r4 h-full w-full object-cover"
                 />

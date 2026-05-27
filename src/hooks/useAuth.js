@@ -3,15 +3,16 @@ import { useNavigate } from "react-router-dom";
 import ROUTES from "../Routes";
 import useAuthStore from "../store/useAuthStore";
 
+import api from "../api";
+
 // 로그인 / 회원가입 / 로그아웃 관련 로직을 담당하는 커스텀 훅 >.<
-// 지금은 localStorage를 간단한 임시 저장소로 사용 !! 해서 제대로 했는지 확인중...
-// 실제 API 연동 시 코드 좀 수정하면 될 듯!!! ㅠ.ㅠ
 
 // ─── 로그인 훅
 export function useLogin() {
   const navigate = useNavigate();
 
   const login = useAuthStore((state) => state.login);
+  const setUserFromServer = useAuthStore((state) => state.setUserFromServer);
 
   // 입력값 상태
   const [id, setId] = useState("");
@@ -37,38 +38,47 @@ export function useLogin() {
     setIsLoading(true);
 
     try {
-      login(id);
+      // post- /accounts/login/
+      const response = await api.post("/accounts/login/", {
+        username: id,
+        password: password,
+      });
+
+      const { id: userId, username, access, refresh } = response.data;
+      login(userId, username, access, refresh); // useAuthStore에 저장 - persist 자동 반영
+
+      const profileResponse = await api.get("/accounts/profile/", {
+        headers: {
+          Authorization: `Bearer ${access}`,
+        },
+      });
+      setUserFromServer(profileResponse.data); //GET 추가
+
       navigate(ROUTES.DIARY_LIST);
     } catch (err) {
-      setError("로그인에 실패했습니다. 다시 시도해주세요.");
+      setError(
+        err.response?.data?.message ||
+          "로그인에 실패했습니다. 다시 시도해주세요.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  return {
-    id,
-    setId,
-    password,
-    setPassword,
-    error,
-    isLoading,
-    handleLogin,
-  };
+  return { id, setId, password, setPassword, error, isLoading, handleLogin };
 }
 
 // ─── 회원가입 훅
+// api 호출은 온보딩 마지막에 해야 함 회원가입 정보 api 한 번에 받으니까
 export function useSignup() {
   const navigate = useNavigate();
-  // 회원가입하면 로그인 상태로 만들기
-  const login = useAuthStore((state) => state.login);
+  const setTemp = useAuthStore((state) => state.setTemp);
 
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = async (e) => {
+  const handleSignup = (e) => {
     e.preventDefault();
     setError("");
 
@@ -76,50 +86,18 @@ export function useSignup() {
       setError("아이디와 비밀번호를 입력해주세요.");
       return;
     }
-
-    setIsLoading(true);
-
-    try {
-      login(id);
-      navigate(ROUTES.ONBOARDING_NICKNAME);
-    } catch (err) {
-      setError("회원가입에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setIsLoading(false);
-    }
+    // 아이디 비번 임시저장하고 온보딩 넘어가기
+    setTemp(id, password);
+    navigate(ROUTES.ONBOARDING_NICKNAME);
   };
 
-  // "이미 회원이라면? 로그인하기" 클릭 시 이동
   const goToLogin = () => navigate(ROUTES.LOGIN);
 
-  return {
-    id,
-    setId,
-    password,
-    setPassword,
-    error,
-    isLoading,
-    handleSignup,
-    goToLogin,
-  };
+  return { id, setId, password, setPassword, error, handleSignup, goToLogin };
 }
 
-// ─── 로그아웃 로직! 컴포넌트에서 직접 호출?! 훅은 아님...
+// ── 로그아웃 함수
 export function logout(navigate) {
   useAuthStore.getState().logout();
   navigate(ROUTES.LOGIN);
-}
-
-// ─── 현재 로그인된 유저 ID 가져오기 / 온보딩 시 받은 유저 정보 가져오기
-export function getUserId() {
-  return useAuthStore.getState().userId;
-}
-export function getUserNickname() {
-  return useAuthStore.getState().userNickname;
-}
-export function getUserBirthdate() {
-  return useAuthStore.getState().userBirthdate;
-}
-export function getUserPurpose() {
-  return useAuthStore.getState().userPurpose;
 }
