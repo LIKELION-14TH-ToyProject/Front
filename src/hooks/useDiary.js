@@ -4,29 +4,33 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import ROUTES from "../Routes";
 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
 import api from "../api";
+
+const diaryKeys = {
+  // 쿼리 키 관리는...한번에 하는 게 좋다고 함!
+  all: ["diaries"], // 목록 쿼리 키
+  detail: (id) => ["diaries", id], // 상세 쿼리 키 (id별로 캐시 분리~.~)
+};
 
 // ─── 1-1. 일기 목록 훅
 export function useDiaryList() {
-  const [diaries, setDiaries] = useState([]);
-  const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // 로딩/에러/데이터 상태를 useQuery로 리팩토링
+  const {
+    data: diaries = [],
+    error: queryError,
+    isLoading,
+  } = useQuery({
+    queryKey: diaryKeys.all,
+    queryFn: async () => {
+      // GET diary
+      const response = await api.get("/diary/");
+      return [...response.data].reverse(); // 최신순!
+    },
+  });
 
-  useEffect(() => {
-    const fetchDiaries = async () => {
-      try {
-        // get- /diary/
-        const response = await api.get("/diary/");
-        setDiaries([...response.data].reverse()); // 서버가 오래된순으로 주니까 최신순으로 뒤집기
-      } catch (err) {
-        setError("일기를 불러오지 못했습니다.");
-        console.error("일기 목록 불러오기 실패:", err);
-      } finally {
-        setIsLoading(false); // 성공/실패 모두 로딩 종료 이거 빼먹어서 ㅠ 고생
-      }
-    };
-    fetchDiaries();
-  }, []);
+  const error = queryError ? "일기를 불러오지 못했습니다." : null;
 
   return { diaries, error, isLoading };
 }
@@ -49,12 +53,12 @@ export function useDiaryFilter(diaries, selectedTags) {
 // ─── 1-2. 일기 작성 훅
 export function useDiaryWrite() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient(); // 등록 성공 후 목록 캐시 정리용
 
   const [imageFile, setImageFile] = useState(null); // 업로드한 이미지 파일 객체
   const [imagePreview, setImagePreview] = useState(""); // 미리보기용 URL
   const [tags, setTags] = useState([]); // 태그 배열
   const [content, setContent] = useState(""); // 본문 텍스트
-  const [isLoading, setIsLoading] = useState(false); // 등록 중이면, 버튼 비활성화!
 
   const handleImageChange = (e) => {
     const file = e.target.files[0]; //input event!, 파일 집어오기
@@ -74,12 +78,9 @@ export function useDiaryWrite() {
     setImagePreview("");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      // post- /diary/ 헤더 타입 다름
+  // POST diary useMutation으로 리팩토링
+  const { mutate: createDiary, isPending: isLoading } = useMutation({
+    mutationFn: async () => {
       const formData = new FormData();
       formData.append("title", content.slice(0, 50)); // body 앞 50자 정도? title로 사용
       formData.append("body", content); // 본문 전체
@@ -87,17 +88,24 @@ export function useDiaryWrite() {
       tags.forEach((tag) => formData.append("tag_names", tag)); // 태그 배열
       if (imageFile) formData.append("photo", imageFile); // 이미지 파일
 
-      await api.post("/diary/", formData, {
+      return api.post("/diary/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
+    },
+    onSuccess: () => {
+      // 일기 목록 캐시를 최신 반영 가능
+      queryClient.invalidateQueries({ queryKey: diaryKeys.all });
       navigate(ROUTES.DIARY_LIST);
-    } catch (err) {
+    },
+    onError: (err) => {
       console.error("일기 등록 실패:", err);
       alert(err.response?.data?.message || "일기 등록에 실패했습니다.");
-    } finally {
-      setIsLoading(false);
-    }
+    },
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    createDiary();
   };
 
   return {
@@ -120,21 +128,16 @@ export function useDiaryDetail() {
   const { id } = useParams(); // URL에서 :id 가져오기 -pk
   const navigate = useNavigate();
 
-  const [diary, setDiary] = useState(null); // 현재 상세 일기 데이터, 마운트 시에 일기 불러옴
-
-  useEffect(() => {
-    const fetchDiary = async () => {
-      try {
-        // get- /diary/<int:pk>
-        const response = await api.get(`/diary/${id}/`);
-        setDiary(response.data);
-      } catch (err) {
-        console.error("일기 불러오기 실패:", err);
-        setDiary(null);
-      }
-    };
-    fetchDiary();
-  }, [id]);
+  // fetch 과정 useQuery로 대체
+  const { data: diary = null } = useQuery({
+    queryKey: diaryKeys.detail(id),
+    queryFn: async () => {
+      // get- /diary/<int:pk>
+      const response = await api.get(`/diary/${id}/`);
+      return response.data;
+    },
+    enabled: !!id, // id 없으면 요청 자체 안 보내게 ㅠ 오류 방지
+  });
 
   const handleEdit = () => {
     navigate(ROUTES.DIARY_WRITE, { state: { editDiary: diary } }); // 페이지 이동 시 파라미터 전달
@@ -149,6 +152,7 @@ export function useDiaryDetail() {
 // ─── 1-3-3. 일기 삭제 훅
 export function useDiaryDelete(diaryId) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [isModalOpen, setIsModalOpen] = useState(false); // 삭제 버튼 클릭 -> 확인 모달 열기
 
@@ -160,15 +164,26 @@ export function useDiaryDelete(diaryId) {
     setIsModalOpen(false);
   };
 
-  const handleConfirmDelete = async (onSuccess) => {
-    try {
-      // delete- /diary/<int:pk>/
-      await api.delete(`/diary/${diaryId}/`);
-      onSuccess?.();
-    } catch (err) {
+  // Delete diary - useMutation으로 변경
+  const { mutate: deleteDiary } = useMutation({
+    mutationFn: async () => {
+      return api.delete(`/diary/${diaryId}/`);
+    },
+    onError: (err) => {
       console.error("일기 삭제 실패:", err);
       alert(err.response?.data?.message || "일기 삭제에 실패했습니다.");
-    }
+    },
+  });
+
+  const handleConfirmDelete = (onSuccess) => {
+    deleteDiary(undefined, {
+      onSuccess: () => {
+        // 목록 캐시 무효화,,, 삭제된 상세 캐시도 제거
+        queryClient.invalidateQueries({ queryKey: diaryKeys.all });
+        queryClient.removeQueries({ queryKey: diaryKeys.detail(diaryId) });
+        onSuccess?.();
+      },
+    });
   };
 
   return {
@@ -182,6 +197,7 @@ export function useDiaryDelete(diaryId) {
 // ─── 1-2. 일기 수정 훅 (상세페이지에서 수정 버튼 클릭 시 작성 페이지 재활용)
 export function useDiaryEdit() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const location = useLocation(); // 추가
   const editDiary = location.state?.editDiary; // 추가
@@ -191,7 +207,6 @@ export function useDiaryEdit() {
   const [imagePreview, setImagePreview] = useState("");
   const [tags, setTags] = useState([]);
   const [content, setContent] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   // 수정 모드 위해 내용 setting
   const initWithExistingData = (diary) => {
@@ -215,19 +230,9 @@ export function useDiaryEdit() {
     setImagePreview("");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // id가 없으면 수정 불가 - 경로 오류 해결/ 작성모드랑 같이 쓰니까
-    if (!id) {
-      console.error("수정할 일기를 찾을 수 없습니다 ㅠ.ㅠ");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // put - /diary/<int:pk>/
+  // PUT diary - useMutation 리팩토링
+  const { mutate: editDiaryMutate, isPending: isLoading } = useMutation({
+    mutationFn: async () => {
       const formData = new FormData();
       formData.append("title", content.slice(0, 50));
       formData.append("body", content);
@@ -239,17 +244,32 @@ export function useDiaryEdit() {
         formData.append("photo", ""); // 이미지 삭제 (빈 값으로 서버에 전달)
       }
 
-      await api.put(`/diary/${id}/`, formData, {
+      return api.put(`/diary/${id}/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
+    },
+    onSuccess: () => {
+      // 목록 캐시랑 해당 상세 캐시 수정 반영
+      queryClient.invalidateQueries({ queryKey: diaryKeys.all });
+      queryClient.invalidateQueries({ queryKey: diaryKeys.detail(id) });
       navigate(ROUTES.DIARY_DETAIL.replace(":id", id));
-    } catch (err) {
+    },
+    onError: (err) => {
       console.error("일기 수정 실패:", err);
       alert(err.response?.data?.message || "일기 수정에 실패했습니다.");
-    } finally {
-      setIsLoading(false);
+    },
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // id가 없으면 수정 불가 - 경로 오류 해결/ 작성모드랑 같이 쓰니까
+    if (!id) {
+      console.error("수정할 일기를 찾을 수 없습니다 ㅠ.ㅠ");
+      return;
     }
+
+    editDiaryMutate();
   };
 
   return {
@@ -267,4 +287,4 @@ export function useDiaryEdit() {
   };
 }
 
-// 이거 하느라 머리 쥐어뜯음 ㅠ.ㅠ 울지말자
+// 이거 하느라 머리 쥐어뜯음 ㅠ.ㅠ 울지말자 +++
